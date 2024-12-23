@@ -1,8 +1,6 @@
 #ifndef _SCANNER_H_
 #define _SCANNER_H_
 
-//#include "scanner.gen.h"
-
 typedef enum {
     END_OF_INPUT,
     PIPE,
@@ -29,6 +27,7 @@ typedef struct {
 } token_t;
 
 void init_scanner(const char* file_name);
+void uninit_scanner(void);
 token_t* get_token(void);
 token_t* advance_token(void);
 int post_token_queue(void);

@@ -1,21 +1,6 @@
 
 %{
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-
-#include "parser.h"
 #include "scanner.h"
-
-typedef struct {
-    token_t** list;
-    int cap;
-    int len;
-    int crnt;
-} scanner_t;
-
-static scanner_t* scanner = NULL;
 
 static void add_token(token_type_t type, const char* str);
 
@@ -74,7 +59,19 @@ static void add_token(token_type_t type, const char* str);
 
 %%
 
-char* _str_dup(const char* str) {
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#include "parser.h"
+#include "pointer_list.h"
+
+typedef pointer_list_t scanner_t;
+static scanner_t* scanner = NULL;
+static int crnt = 0;
+
+static char* _str_dup(const char* str) {
 
     int len = strlen(str)+1;
     char* ptr = malloc(len);
@@ -193,13 +190,7 @@ static void add_token(token_type_t type, const char* str) {
     tok->type = type;
     tok->text = _str_dup(str);
 
-    if(scanner->len+1 > scanner->cap) {
-        scanner->cap <<= 1;
-        scanner->list = realloc(scanner->list, scanner->cap*sizeof(token_t*));
-    }
-
-    scanner->list[scanner->len] = tok;
-    scanner->len++;
+    add_pointer_list(scanner, tok);
 
     if(tok->type == NON_TERMINAL) {
         tok->name = _str_dup(decorate_nterm(tok->text));
@@ -222,11 +213,7 @@ void init_scanner(const char* file_name) {
         exit(1);
     }
 
-    scanner = malloc(sizeof(scanner_t));
-    scanner->cap = 1 << 3;
-    scanner->len = 0;
-    scanner->crnt = 0;
-    scanner->list = malloc(sizeof(token_t*)*scanner->cap);
+    scanner = create_pointer_list();
 
     while(yylex()) {
         /* state driven execution */
@@ -238,27 +225,39 @@ void init_scanner(const char* file_name) {
     //printf("%d tokens read\n", scanner->len);
 }
 
+void uninit_scanner(void) {
+
+    if(scanner != NULL) {
+        int idx = 0;
+        token_t* tok;
+        while(NULL != (tok = iterate_pointer_list(scanner, &idx))) {
+            free((void*)tok->text);
+            free((void*)tok->name);
+            free((void*)tok);
+        }
+
+        destroy_pointer_list(scanner);
+    }
+}
+
 token_t* get_token(void) {
 
-    return scanner->list[scanner->crnt];
+    index_pointer_list(scanner, crnt);
 }
 
 token_t* advance_token(void) {
 
-    if(scanner->crnt < scanner->len)
-        scanner->crnt++;
-
-    return get_token();
+    return iterate_pointer_list(scanner, &crnt);
 }
 
 int post_token_queue(void) {
 
-    return scanner->crnt;
+    return crnt;
 }
 
 void reset_token_queue(int post) {
 
-    scanner->crnt = post;
+    crnt = post;
 }
 
 const char* tok_type_to_str(token_t* tok) {

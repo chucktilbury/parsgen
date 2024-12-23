@@ -4,7 +4,7 @@ grammar {
 }
 
 rule {
-    NON_TERMINAL OCURLY rule_function+ CCURLY
+    NON_TERMINAL OCURLY rule_function CCURLY
 }
 
 terminal {
@@ -15,7 +15,8 @@ terminal {
 
 rule_element {
     NON_TERMINAL |
-    terminal
+    terminal |
+    rule_function
 }
 
 rule_element_list {
@@ -27,25 +28,21 @@ rule_function {
     or_func |
     zero_or_more_func |
     zero_or_one_func |
-    one_or_more_func |
-    rule_element
+    one_or_more_func
 }
 
 one_or_more_func {
-    OPAREN rule_function+ CPAREN ONE_OR_MORE |
-    rule_element ONE_OR_MORE
+    rule_element_list ONE_OR_MORE
 }
 
 zero_or_one_func {
-    OPAREN rule_function+ CPAREN ZERO_OR_ONE |
-    rule_element ZERO_OR_ONE
+    rule_element_list ZERO_OR_ONE
 }
 
 zero_or_more_func {
-    OPAREN rule_function+ CPAREN ZERO_OR_MORE |
-    rule_element ZERO_OR_MORE
+    rule_element_list ZERO_OR_MORE
 }
 
 or_func {
-    rule_element_list PIPE rule_element_list
+    rule_element PIPE rule_element
 }

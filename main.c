@@ -4,8 +4,6 @@
 #include <errno.h>
 
 #include "parser.h"
-#include "scan.gen.h"
-#include "scanner.h"
 
 int main(int argc, char **argv) {
 
@@ -14,9 +12,8 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    init_scanner(argv[1]);
+    parse(init_parser(argv[1]));
 
-    parse();
-
-   return 0;
+    uninit_scanner();
+    return 0;
 }

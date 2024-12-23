@@ -31,7 +31,7 @@ void add_pointer_list(pointer_list_t* lst, void* ptr) {
     assert(lst != NULL);
     assert(ptr != NULL);
 
-    if(lst->len+1 < lst->cap) {
+    if(lst->len+1 > lst->cap) {
         lst->cap <<= 1;
         lst->list = realloc(lst->list, sizeof(void*) * lst->cap);
         assert(lst->list != NULL);
@@ -39,6 +39,11 @@ void add_pointer_list(pointer_list_t* lst, void* ptr) {
 
     lst->list[lst->len] = ptr;
     lst->len++;
+}
+
+int len_pointer_list(pointer_list_t* lst) {
+
+    return lst->len;
 }
 
 void* index_pointer_list(pointer_list_t* lst, int idx) {
@@ -57,7 +62,7 @@ void* iterate_pointer_list(pointer_list_t* lst, int* mark) {
     void* ptr = NULL;
 
     if((*mark >= 0) && (*mark < lst->len)) {
-        ptr = lst->list[*mark++];
+        ptr = lst->list[(*mark)++];
     }
 
     return ptr;
