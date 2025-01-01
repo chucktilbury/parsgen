@@ -3,6 +3,7 @@
 #include "scanner.h"
 
 static void add_token(token_type_t type, const char* str);
+static const char* fname;
 
 %}
 
@@ -66,18 +67,12 @@ static void add_token(token_type_t type, const char* str);
 
 #include "parser.h"
 #include "pointer_list.h"
+#include "memory.h"
 
 typedef pointer_list_t scanner_t;
 static scanner_t* scanner = NULL;
 static int crnt = 0;
 
-static char* _str_dup(const char* str) {
-
-    int len = strlen(str)+1;
-    char* ptr = malloc(len);
-    memcpy(ptr, str, len);
-    return ptr;
-}
 
 static char* decorate_nterm(const char* str) {
 
@@ -185,24 +180,25 @@ static char* decorate_term_oper(const char* str) {
 
 static void add_token(token_type_t type, const char* str) {
 
-    token_t* tok = malloc(sizeof(token_t));
+    token_t* tok = _ALLOC_DS(token_t);
     tok->line_no = yylineno;
     tok->type = type;
-    tok->text = _str_dup(str);
-
-    add_pointer_list(scanner, tok);
+    tok->text = _COPY_STRING(str);
 
     if(tok->type == NON_TERMINAL) {
-        tok->name = _str_dup(decorate_nterm(tok->text));
+        tok->name = _COPY_STRING(decorate_nterm(tok->text));
     }
     else if(tok->type == TERMINAL_NAME) {
-        tok->name = _str_dup(decorate_term_name(tok->text));
+        tok->name = _COPY_STRING(decorate_term_name(tok->text));
     }
     else if(tok->type == TERMINAL_OPER) {
-        tok->name = _str_dup(decorate_term_oper(tok->text));
+        tok->name = _COPY_STRING(decorate_term_oper(tok->text));
     }
     else
+        // TERMINAL_SYMBOL
         tok->name = NULL;
+
+    add_pointer_list(scanner, tok);
 }
 
 void init_scanner(const char* file_name) {
@@ -213,6 +209,7 @@ void init_scanner(const char* file_name) {
         exit(1);
     }
 
+    fname = _COPY_STRING(file_name);
     scanner = create_pointer_list();
 
     while(yylex()) {
@@ -220,9 +217,13 @@ void init_scanner(const char* file_name) {
         //printf("%s\n", yytext);
     }
 
-    add_token(END_OF_INPUT, "");
+    add_token(END_OF_INPUT, "end of input");
 
     //printf("%d tokens read\n", scanner->len);
+
+    //printf("cap: %d\n", scanner->cap);
+    //printf("len: %d\n", scanner->len);
+
 }
 
 void uninit_scanner(void) {
@@ -231,9 +232,9 @@ void uninit_scanner(void) {
         int idx = 0;
         token_t* tok;
         while(NULL != (tok = iterate_pointer_list(scanner, &idx))) {
-            free((void*)tok->text);
-            free((void*)tok->name);
-            free((void*)tok);
+            _FREE(tok->text);
+            _FREE(tok->name);
+            _FREE(tok);
         }
 
         destroy_pointer_list(scanner);
@@ -242,12 +243,17 @@ void uninit_scanner(void) {
 
 token_t* get_token(void) {
 
-    index_pointer_list(scanner, crnt);
+    return index_pointer_list(scanner, crnt);
 }
 
-token_t* advance_token(void) {
+token_t* consume_token(void) {
 
-    return iterate_pointer_list(scanner, &crnt);
+    // do not iterate past the end of the list to return NULL as
+    // the iterator does.
+    if(crnt+1 < scanner->len)
+        return iterate_pointer_list(scanner, &crnt);
+    else
+        return get_token();
 }
 
 int post_token_queue(void) {
@@ -286,4 +292,8 @@ const char* tok_to_str(token_t* tok) {
 
 int get_line_no(void) {
     return yylineno;
+}
+
+const char* get_file_name(void) {
+    return fname;
 }

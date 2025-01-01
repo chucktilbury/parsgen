@@ -34,7 +34,7 @@ typedef struct _ast_node_t_ {
 
 /*
  * grammar {
- *    rule+
+ *    +rule
  * }
  */
 typedef struct _ast_grammar_t_ {
@@ -44,13 +44,13 @@ typedef struct _ast_grammar_t_ {
 
 /*
  * rule {
- *    NON_TERMINAL OCURLY rule_function CCURLY
+ *    NON_TERMINAL OCURLY rule_element_list CCURLY
  * }
  */
 typedef struct _ast_rule_t_ {
     ast_node_t node;
     token_t* non_term;
-    struct _ast_rule_function_t_* function;
+    struct _ast_rule_element_list_t_* elem_lst;
 } ast_rule_t;
 
 /*
@@ -81,8 +81,8 @@ typedef struct _ast_rule_element_t_ {
 
 /*
  * rule_element_list {
- *     OPAREN rule_element+ CPAREN |
- *     rule_element+
+ *     OPAREN +rule_element CPAREN |
+ *     +rule_element
  * }
  */
 typedef struct _ast_rule_element_list_t_ {
@@ -100,12 +100,12 @@ typedef struct _ast_rule_element_list_t_ {
  */
 typedef struct _ast_rule_function_t_ {
     ast_node_t node;
-    void* function;
+    ast_node_t* func;
 } ast_rule_function_t;
 
 /*
  * one_or_more_func {
- *     rule_element_list ONE_OR_MORE
+ *     ONE_OR_MORE rule_element_list
  * }
  */
 typedef struct _ast_one_or_more_func_t_ {
@@ -115,7 +115,7 @@ typedef struct _ast_one_or_more_func_t_ {
 
 /*
  * zero_or_one_func {
- *     rule_element_list ZERO_OR_ONE
+ *     ZERO_OR_ONE rule_element_list
  * }
  */
 typedef struct _ast_zero_or_one_func_t_ {
@@ -125,7 +125,7 @@ typedef struct _ast_zero_or_one_func_t_ {
 
 /*
  * zero_or_more_func {
- *     rule_element_list ZERO_OR_MORE
+ *     ZERO_OR_MORE rule_element_list
  * }
  */
 typedef struct _ast_zero_or_more_func_t_ {
@@ -135,16 +135,16 @@ typedef struct _ast_zero_or_more_func_t_ {
 
 /*
  * or_func {
- *     rule_element PIPE rule_element
+ *     rule_element_list PIPE rule_element_list
  * }
  */
 typedef struct _ast_or_func_t_ {
     ast_node_t node;
-    struct _ast_rule_element_t_* right;
-    struct _ast_rule_element_t_* left;
+    struct _ast_rule_element_list_t_* rel;
 } ast_or_func_t;
 
 ast_node_t* create_ast_node(ast_type_t type);
-ast_type_t get_ast_node_type(ast_node_t* node);
+ast_type_t get_ast_node_type(void* node);
+void traverse_ast(void*, void*);
 
 #endif /* _AST_H_ */

@@ -1,17 +1,18 @@
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 
+#include "memory.h"
 #include "pointer_list.h"
 
 pointer_list_t* create_pointer_list() {
 
-    pointer_list_t* ptr = malloc(sizeof(pointer_list_t));
+    pointer_list_t* ptr = _ALLOC_DS(pointer_list_t);
     assert(ptr != NULL);
     ptr->cap = 1 << 3;
     ptr->len = 0;
-    ptr->list = (void**)malloc(sizeof(void*) * ptr->cap);
+    ptr->list = _ALLOC_ARRAY(void*, ptr->cap);
     assert(ptr->list != NULL);
 
     return ptr;
@@ -31,9 +32,9 @@ void add_pointer_list(pointer_list_t* lst, void* ptr) {
     assert(lst != NULL);
     assert(ptr != NULL);
 
-    if(lst->len+1 > lst->cap) {
+    if(lst->len + 1 > lst->cap) {
         lst->cap <<= 1;
-        lst->list = realloc(lst->list, sizeof(void*) * lst->cap);
+        lst->list = _REALLOC_ARRAY(lst->list, void*, lst->cap);
         assert(lst->list != NULL);
     }
 
@@ -49,9 +50,10 @@ int len_pointer_list(pointer_list_t* lst) {
 void* index_pointer_list(pointer_list_t* lst, int idx) {
 
     assert(lst != NULL);
-    assert((idx >= 0) && (idx < lst->len));
-
-    return lst->list[idx];
+    if((idx >= 0) && (idx < lst->len))
+        return lst->list[idx];
+    else
+        return NULL;
 }
 
 void* iterate_pointer_list(pointer_list_t* lst, int* mark) {
@@ -62,7 +64,8 @@ void* iterate_pointer_list(pointer_list_t* lst, int* mark) {
     void* ptr = NULL;
 
     if((*mark >= 0) && (*mark < lst->len)) {
-        ptr = lst->list[(*mark)++];
+        ptr = lst->list[*mark];
+        *mark = *mark + 1;
     }
 
     return ptr;

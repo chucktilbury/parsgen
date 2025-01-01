@@ -5,6 +5,8 @@ OBJS	=	scanner.o \
 			main.o \
 			parser.o \
 			ast.o \
+			errors.o \
+			memory.o \
 			pointer_list.o
 
 OPT = -g -std=c11 -Wall -Wextra -Wpedantic -pedantic
@@ -25,6 +27,8 @@ scanner.o: scanner.c scan.gen.h
 parser.o: parser.c parser.h
 ast.o: ast.c ast.h
 pointer_list.o: pointer_list.c pointer_list.h
+errors.o: errors.c errors.h
+memory.o: memory.c memory.h
 main.o: main.c
 
 clean:

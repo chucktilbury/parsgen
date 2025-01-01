@@ -29,11 +29,12 @@ typedef struct {
 void init_scanner(const char* file_name);
 void uninit_scanner(void);
 token_t* get_token(void);
-token_t* advance_token(void);
+token_t* consume_token(void);
 int post_token_queue(void);
 void reset_token_queue(int post);
 const char* tok_to_str(token_t*);
 const char* tok_type_to_str(token_t*);
+const char* get_file_name();
 int get_line_no(void);
 
 #endif /* _SCANNER_H_ */
