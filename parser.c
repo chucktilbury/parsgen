@@ -12,6 +12,10 @@
 #include "pointer_list.h"
 #include "scanner.h"
 
+#define MATCH_STATE     1000
+#define NO_MATCH_STATE  2000
+#define ERROR_STATE     3000
+
 // #define TRACE_PARSER_STATE
 
 #ifdef TRACE_PARSER_STATE
@@ -94,7 +98,7 @@ static ast_grammar_t* parse_grammar(parser_state_t* pstate) {
                 }
                 else {
                     PARSE_ERROR("grammar must contain at least one rule");
-                    state = 3000;
+                    state =  ERROR_STATE;
                 }
                 break;
 
@@ -110,28 +114,28 @@ static ast_grammar_t* parse_grammar(parser_state_t* pstate) {
                 TRACE;
                 if(TTYPE == END_OF_INPUT) {
                     consume_token();
-                    state = 1000;
+                    state =  MATCH_STATE;
                 }
                 else {
                     EXPECTED("end of input");
-                    state = 3000;
+                    state =  ERROR_STATE;
                 }
                 break;
 
-            case 1000:
+            case MATCH_STATE:
                 TRACE;
                 ptr = create_ast_node(AST_);
                 ptr->rules = list;
                 finished = true;
                 break;
 
-            case 2000:
+            case NO_MATCH_STATE:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 3000:
+            case ERROR_STATE:
                 TRACE;
                 finished = true;
                 break;
@@ -177,7 +181,7 @@ static ast_rule_t* parse_rule(parser_state_t* pstate) {
                 }
                 else {
                     EXPECTED("a non-terminal symbol");
-                    state = 3000;
+                    state =  ERROR_STATE;
                 }
                 break;
 
@@ -189,7 +193,7 @@ static ast_rule_t* parse_rule(parser_state_t* pstate) {
                 }
                 else {
                     EXPECTED("a \"{\"");
-                    state = 3000;
+                    state =  ERROR_STATE;
                 }
                 break;
 
@@ -202,7 +206,7 @@ static ast_rule_t* parse_rule(parser_state_t* pstate) {
                 }
                 else {
                     PARSE_ERROR("at least one rule element is required in a rule");
-                    state = 3000;
+                    state =  ERROR_STATE;
                 }
                 break;
 
@@ -218,15 +222,15 @@ static ast_rule_t* parse_rule(parser_state_t* pstate) {
                 TRACE;
                 if(TTYPE == CCBRACE) {
                     consume_token();
-                    state = 1000;
+                    state =  MATCH_STATE;
                 }
                 else {
                     EXPECTED("a \"}\"");
-                    state = 3000;
+                    state =  ERROR_STATE;
                 }
                 break;
 
-            case 1000:
+            case MATCH_STATE:
                 TRACE;
                 ptr = create_ast_node(AST_);
                 ptr->nterm = nterm;
@@ -234,13 +238,13 @@ static ast_rule_t* parse_rule(parser_state_t* pstate) {
                 finished = true;
                 break;
 
-            case 2000:
+            case NO_MATCH_STATE:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 3000:
+            case ERROR_STATE:
                 TRACE;
                 finished = true;
                 break;
@@ -288,85 +292,85 @@ static ast_rule_element_t* parse_rule_element(parser_state_t* pstate) {
                 TRACE;
                 if(TTYPE == NON_TERMINAL) {
                     term = get_token();
-                    state = 1000;
+                    state =  MATCH_STATE;
                 }
                 else
-                    state = 110;
+                    state = 200;
                 break;
 
-            case 110:
+            case 200:
                 TRACE;
                 if(TTYPE == TERMINAL_NAME) {
                     term = get_token();
-                    state = 1000;
+                    state =  MATCH_STATE;
                 }
                 else
-                    state = 120;
+                    state = 300;
                 break;
 
-            case 120:
+            case 300:
                 TRACE;
                 if(TTYPE == TERMINAL_OPER) {
                     term = get_token();
-                    state = 1000;
+                    state =  MATCH_STATE;
                 }
                 else
-                    state = 130;
+                    state = 400;
                 break;
 
-            case 130:
+            case 400:
                 TRACE;
                 if(TTYPE == TERMINAL_SYMBOL) {
                     term = get_token();
-                    state = 1000;
+                    state =  MATCH_STATE;
                 }
                 else
-                    state = 140;
+                    state = 500;
                 break;
 
-            case 140:
+            case 500:
                 TRACE;
                 if(NULL != (nterm = parse_or_func(pstate)))
-                    state = 1000;
+                    state =  MATCH_STATE;
                 else
-                    state = 150;
+                    state = 600;
                 break;
 
-            case 150:
+            case 600:
                 TRACE;
                 if(NULL != (nterm = parse_zero_or_more_func(pstate)))
-                    state = 1000;
+                    state =  MATCH_STATE;
                 else
-                    state = 160;
+                    state = 700;
                 break;
 
-            case 160:
+            case 700:
                 TRACE;
                 if(NULL != (nterm = parse_zero_or_one_func(pstate)))
-                    state = 1000;
+                    state =  MATCH_STATE;
                 else
-                    state = 170;
+                    state = 800;
                 break;
 
-            case 170:
+            case 800:
                 TRACE;
                 if(NULL != (nterm = parse_one_or_more_func(pstate)))
-                    state = 1000;
+                    state =  MATCH_STATE;
                 else
-                    state = 180;
+                    state = 900;
                 break;
 
-            case 180:
+            case 900:
                 TRACE;
                 if(NULL != (nterm = parse_group_func(pstate)))
-                    state = 1000;
+                    state =  MATCH_STATE;
                 else {
                     EXPECTED("a function or a terminal");
-                    state = 3000;
+                    state =  ERROR_STATE;
                 }
                 break;
 
-            case 1000:
+            case MATCH_STATE:
                 TRACE;
                 ptr = create_ast_node(AST_);
                 ptr->term = term;
@@ -374,13 +378,13 @@ static ast_rule_element_t* parse_rule_element(parser_state_t* pstate) {
                 finished = true;
                 break;
 
-            case 2000:
+            case NO_MATCH_STATE:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 3000:
+            case ERROR_STATE:
                 TRACE;
                 finished = true;
                 break;
@@ -410,26 +414,45 @@ static ast_one_or_more_func_t* parse_one_or_more_func(parser_state_t* pstate) {
     bool finished = false;
 
     int post = post_token_queue();
+    pointer_list_t* list = NULL;
+    ast_rule_element_t* re = NULL;
 
     while(!finished) {
         switch(state) {
             case 100:
                 TRACE;
+                if(TTYPE == PLUS_TOKEN) {
+                    consume_token();
+                    state = 110;
+                }
+                else
+                    state =  NO_MATCH_STATE;
                 break;
 
-            case 1000:
+            case 110:
+                TRACE;
+                if(NULL != (re = parse_rule_element(pstate)))
+                    state =  MATCH_STATE;
+                else {
+                    EXPECTED("one or more rule elements");
+                    state =  ERROR_STATE;
+                }
+                break;
+
+            case MATCH_STATE:
                 TRACE;
                 ptr = create_ast_node(AST_);
+                ptr->rule_element = re;
                 finished = true;
                 break;
 
-            case 2000:
+            case NO_MATCH_STATE:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 3000:
+            case ERROR_STATE:
                 TRACE;
                 finished = true;
                 break;
@@ -466,19 +489,19 @@ static ast_zero_or_one_func_t* parse_zero_or_one_func(parser_state_t* pstate) {
                 TRACE;
                 break;
 
-            case 1000:
+            case MATCH_STATE:
                 TRACE;
                 ptr = create_ast_node(AST_);
                 finished = true;
                 break;
 
-            case 2000:
+            case NO_MATCH_STATE:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 3000:
+            case ERROR_STATE:
                 TRACE;
                 finished = true;
                 break;
@@ -515,19 +538,19 @@ static ast_zero_or_more_func_t* parse_zero_or_more_func(parser_state_t* pstate) 
                 TRACE;
                 break;
 
-            case 1000:
+            case MATCH_STATE:
                 TRACE;
                 ptr = create_ast_node(AST_);
                 finished = true;
                 break;
 
-            case 2000:
+            case NO_MATCH_STATE:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 3000:
+            case ERROR_STATE:
                 TRACE;
                 finished = true;
                 break;
@@ -564,19 +587,19 @@ static ast_or_func_t* parse_or_func(parser_state_t* pstate) {
                 TRACE;
                 break;
 
-            case 1000:
+            case MATCH_STATE:
                 TRACE;
                 ptr = create_ast_node(AST_);
                 finished = true;
                 break;
 
-            case 2000:
+            case NO_MATCH_STATE:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 3000:
+            case ERROR_STATE:
                 TRACE;
                 finished = true;
                 break;
