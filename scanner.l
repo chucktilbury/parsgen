@@ -14,7 +14,7 @@ static const char* fname;
 %option outfile="scanner.c"
 
 %%
-
+    /* These are part of the grammar syntax. */
 "|"     {add_token(PIPE, yytext); return PIPE;}
 "+"     {add_token(ONE_OR_MORE, yytext); return ONE_OR_MORE;}
 "*"     {add_token(ZERO_OR_MORE, yytext); return ZERO_OR_MORE;}

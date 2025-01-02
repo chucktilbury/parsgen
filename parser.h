@@ -1,15 +1,21 @@
-
 #ifndef _PARSER_H_
 #define _PARSER_H_
 
-#include "ast.h"
+/*
+    grammar
+    rule
+    rule_element
+    one_or_more_func
+    zero_or_one_func
+    zero_or_more_func
+    or_func
+    group_func
+*/
 
-typedef ast_grammar_t rule_list_t;
 typedef struct _parser_state_ {
     int state; // dummy
 } parser_state_t;
 
-ast_grammar_t* parse(parser_state_t* ptr);
-parser_state_t* init_parser(const char* file_name);
+void* parse(const char* file_name);
 
 #endif /* _PARSER_H_ */

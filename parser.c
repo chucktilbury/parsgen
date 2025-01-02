@@ -12,17 +12,6 @@
 #include "pointer_list.h"
 #include "scanner.h"
 
-static ast_grammar_t* parse_grammar(parser_state_t* pstate);
-static ast_rule_t* parse_rule(parser_state_t* pstate);
-static ast_terminal_t* parse_terminal(parser_state_t* pstate);
-static ast_rule_element_t* parse_rule_element(parser_state_t* pstate);
-static ast_rule_element_list_t* parse_rule_element_list(parser_state_t* pstate);
-static ast_rule_function_t* parse_rule_function(parser_state_t* pstate);
-static ast_one_or_more_func_t* parse_one_or_more_func(parser_state_t* pstate);
-static ast_zero_or_one_func_t* parse_zero_or_one_func(parser_state_t* pstate);
-static ast_zero_or_more_func_t* parse_zero_or_more_func(parser_state_t* pstate);
-static ast_or_func_t* parse_or_func(parser_state_t* pstate);
-
 // #define TRACE_PARSER_STATE
 
 #ifdef TRACE_PARSER_STATE
@@ -63,867 +52,583 @@ static int depth = 0;
         PARSE_ERROR("expected %s but got \"%s\"", what, get_token()->text); \
     } while(false)
 
+static ast_grammar_t* parse_grammar(parser_state_t* pstate);
+static ast_rule_t* parse_rule(parser_state_t* pstate);
+static ast_rule_element_t* parse_rule_element(parser_state_t* pstate);
+static ast_one_or_more_func_t* parse_one_or_more_func(parser_state_t* pstate);
+static ast_zero_or_one_func_t* parse_zero_or_one_func(parser_state_t* pstate);
+static ast_zero_or_more_func_t* parse_zero_or_more_func(parser_state_t* pstate);
+static ast_or_func_t* parse_or_func(parser_state_t* pstate);
+static ast_group_func_t* parse_group_func(parser_state_t* pstate);
+
+
 /*
  * grammar {
- *    +rule END_OF_INPUT
+ *     +rule END_OF_INPUT
  * }
+ *
  */
 static ast_grammar_t* parse_grammar(parser_state_t* pstate) {
 
-    assert(pstate != NULL);
     ENTER;
 
-    ast_grammar_t* retv = NULL;
+    assert(pstate != NULL);
+    ast_grammar_t* ptr = NULL;
 
-    int post = post_token_queue();
     int state = 0;
     bool finished = false;
+
+    int post = post_token_queue();
 
     ast_rule_t* rule = NULL;
     pointer_list_t* list = NULL;
 
     while(!finished) {
         switch(state) {
-            case 0:
-                // initial state, one or more rule.
+            case 100:
                 TRACE;
                 if(NULL != (rule = parse_rule(pstate))) {
                     list = create_pointer_list();
                     add_pointer_list(list, rule);
-                    state = 1;
+                    state = 110;
                 }
                 else {
-                    // error
-                    EXPECTED("a rule definition");
-                    state = 102;
+                    PARSE_ERROR("grammar must contain at least one rule");
+                    state = 3000;
                 }
                 break;
 
-            case 1:
-                // get rules until EOI
+            case 110:
+                TRACE;
+                if(NULL != (rule = parse_rule(pstate)))
+                    add_pointer_list(list, rule);
+                else
+                    state = 120;
+                break;
+
+            case 120:
                 TRACE;
                 if(TTYPE == END_OF_INPUT) {
-                    state = 100;
                     consume_token();
-                }
-                else if(NULL != (rule = parse_rule(pstate))) {
-                    add_pointer_list(list, rule);
-                    // state stays the same
+                    state = 1000;
                 }
                 else {
-                    // error
-                    EXPECTED("a rule definition or the end of input");
-                    state = 102;
+                    EXPECTED("end of input");
+                    state = 3000;
                 }
                 break;
 
-            case 100:
-                // match made
+            case 1000:
                 TRACE;
-                retv = (ast_grammar_t*)create_ast_node(AST_GRAMMAR);
-                retv->rules = list;
+                ptr = create_ast_node(AST_);
+                ptr->rules = list;
                 finished = true;
                 break;
 
-            case 101:
-                // no match
+            case 2000:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 102:
-                // error return
+            case 3000:
                 TRACE;
                 finished = true;
                 break;
 
             default:
                 fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
         }
     }
 
-    RETURN(retv);
+    RETURN(ptr);
 }
 
 /*
  * rule {
- *    NON_TERMINAL OCURLY rule_element_list CCURLY
+ *     NON_TERMINAL '{' +rule_element '}'
  * }
+ *
  */
 static ast_rule_t* parse_rule(parser_state_t* pstate) {
 
-    assert(pstate != NULL);
     ENTER;
 
-    ast_rule_t* retv = NULL;
+    assert(pstate != NULL);
+    ast_rule_t* ptr = NULL;
 
-    int post = post_token_queue();
     int state = 0;
     bool finished = false;
 
-    token_t* non_term = NULL;
-    ast_rule_element_list_t* rel = NULL;
+    int post = post_token_queue();
+
+    token_t* nterm;
+    pointer_list_t* rule_elems;
+    ast_rule_element_t* elem;
 
     while(!finished) {
         switch(state) {
-            case 0:
-                // initial state
-                // get the static sequence
+            case 100:
                 TRACE;
                 if(TTYPE == NON_TERMINAL) {
-                    non_term = get_token();
+                    nterm = get_token();
                     consume_token();
-                    state = 1;
+                    state = 110;
                 }
                 else {
-                    state = 101;
+                    EXPECTED("a non-terminal symbol");
+                    state = 3000;
                 }
                 break;
 
-            case 1:
+            case 110:
                 TRACE;
-                if(TTYPE == OCURLY) {
+                if(TTYPE == OCBRACE) {
                     consume_token();
-                    state = 2;
+                    state = 120;
                 }
                 else {
                     EXPECTED("a \"{\"");
-                    state = 102;
+                    state = 3000;
                 }
                 break;
 
-            case 2:
+            case 120:
                 TRACE;
-                if(NULL != (rel = parse_rule_element_list(pstate)))
-                    state = 3;
+                if(NULL != (elem = parse_rule_element(pstate))) {
+                    rule_elems = create_pointer_list();
+                    add_pointer_list(rule_elems, elem);
+                    state = 130;
+                }
                 else {
-                    EXPECTED("a rule body");
-                    state = 102;
+                    PARSE_ERROR("at least one rule element is required in a rule");
+                    state = 3000;
                 }
                 break;
 
-            case 3:
+            case 130:
                 TRACE;
-                if(TTYPE == CCURLY) {
+                if(NULL != (elem = parse_rule_element(pstate)))
+                    add_pointer_list(rule_elems, elem);
+                else
+                    state = 140;
+                break;
+
+            case 140:
+                TRACE;
+                if(TTYPE == CCBRACE) {
                     consume_token();
-                    state = 100;
+                    state = 1000;
                 }
                 else {
                     EXPECTED("a \"}\"");
-                    state = 102;
+                    state = 3000;
                 }
                 break;
 
-
-            case 100:
-                // match made
+            case 1000:
                 TRACE;
-                retv = (ast_rule_t*)create_ast_node(AST_RULE);
-                retv->elem_lst = rel;
-                retv->non_term = non_term;
+                ptr = create_ast_node(AST_);
+                ptr->nterm = nterm;
+                ptr->rule_elems = rule_elems;
                 finished = true;
                 break;
 
-            case 101:
-                // no match
+            case 2000:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 102:
-                // error return
+            case 3000:
                 TRACE;
                 finished = true;
                 break;
 
             default:
                 fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
         }
     }
 
-    RETURN(retv);
-}
-
-/*
- * terminal {
- *     TERMINAL_NAME |
- *     TERMINAL_OPER |
- *     TERMINAL_SYMBOL
- * }
- */
-static ast_terminal_t* parse_terminal(parser_state_t* pstate) {
-
-    assert(pstate != NULL);
-    ENTER;
-
-    ast_terminal_t* retv = NULL;
-    int post = post_token_queue();
-    int state = 0;
-    bool finished = false;
-
-    while(!finished) {
-        switch(state) {
-            case 00:
-                // initial state
-                TRACE;
-                if(TTYPE == TERMINAL_NAME)
-                    state = 100;
-                else
-                    state = 10;
-                break;
-
-            case 10:
-                TRACE;
-                if(TTYPE == TERMINAL_OPER)
-                    state = 100;
-                else
-                    state = 20;
-                break;
-
-            case 20:
-                TRACE;
-                if(TTYPE == TERMINAL_SYMBOL)
-                    state = 100;
-                else
-                    state = 101;
-                break;
-
-            case 100:
-                // match made
-                TRACE;
-                retv = (ast_terminal_t*)create_ast_node(AST_TERMINAL);
-                retv->term = get_token();
-                consume_token();
-                finished = true;
-                break;
-
-            case 101:
-                // no match
-                TRACE;
-                reset_token_queue(post);
-                finished = true;
-                break;
-
-            case 102:
-                // error return
-                TRACE;
-                finished = true;
-                break;
-
-            default:
-                fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
-        }
-    }
-
-    RETURN(retv);
+    RETURN(ptr);
 }
 
 /*
  * rule_element {
  *     NON_TERMINAL |
- *     terminal |
- *     rule_function
- * }
- */
-static ast_rule_element_t* parse_rule_element(parser_state_t* pstate) {
-
-    assert(pstate != NULL);
-    ENTER;
-
-    ast_rule_element_t* retv = NULL;
-    int post = post_token_queue();
-    int state = 0;
-    bool finished = false;
-
-    token_t* non_term = NULL;
-    ast_terminal_t* term = NULL;
-    ast_rule_function_t* function = NULL;
-
-    while(!finished) {
-        switch(state) {
-            case 00:
-                // initial state
-                TRACE;
-                if(TTYPE == NON_TERMINAL) {
-                    non_term = get_token();
-                    consume_token();
-                    state = 100;
-                }
-                else
-                    state = 10;
-                break;
-
-            case 10:
-                // initial state
-                TRACE;
-                if(NULL != (term = parse_terminal(pstate)))
-                    state = 100;
-                else
-                    state = 20;
-                break;
-
-            case 20:
-                // initial state
-                TRACE;
-                if(NULL != (function = parse_rule_function(pstate)))
-                    state = 100;
-                else {
-                    // EXPECTED("a terminal, non-terminal, or a rule function");
-                    // state = 102;
-                    state = 101;
-                }
-                break;
-
-            case 100:
-                // match made
-                TRACE;
-                retv = (ast_rule_element_t*)create_ast_node(AST_RULE_ELEMENT);
-                retv->non_term = non_term;
-                retv->term = term;
-                retv->function = function;
-                finished = true;
-                break;
-
-            case 101:
-                // no match
-                TRACE;
-                reset_token_queue(post);
-                finished = true;
-                break;
-
-            case 102:
-                // error return
-                TRACE;
-                finished = true;
-                break;
-
-            default:
-                fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
-        }
-    }
-
-    RETURN(retv);
-}
-
-/*
- * rule_element_list {
- *     OPAREN +rule_element CPAREN |
- *     +rule_element
- * }
- */
-static ast_rule_element_list_t* parse_rule_element_list(parser_state_t* pstate) {
-
-    assert(pstate != NULL);
-    ENTER;
-
-    ast_rule_element_list_t* retv = NULL;
-    int post = post_token_queue();
-    int state = 0;
-    bool finished = false;
-
-    ast_rule_element_t* re = NULL;
-    pointer_list_t* list = create_pointer_list();
-
-    while(!finished) {
-        switch(state) {
-            case 00:
-                // initial state
-                TRACE;
-                if(TTYPE == OPAREN) {
-                    consume_token();
-                    state = 10; // a CPAREN is required at the end
-                }
-                else
-                    state = 20; // no CPAREN required
-                break;
-
-            case 10:
-                TRACE;
-                if(NULL != (re = parse_rule_element(pstate))) {
-                    add_pointer_list(list, re);
-                    state = 11;
-                }
-                else {
-                    EXPECTED("a terminal, non-terminal, or a rule function");
-                    state = 102;
-                }
-                break;
-
-
-            case 11:
-                TRACE;
-                if(NULL != (re = parse_rule_element(pstate)))
-                    add_pointer_list(list, re);
-                else
-                    state = 12;
-                break;
-
-
-            case 12:
-                TRACE;
-                if(TTYPE == CPAREN) {
-                    consume_token();
-                    state = 100;
-                }
-                else {
-                    EXPECTED("a \")\"");
-                    state = 102;
-                }
-                break;
-
-            case 20:
-                TRACE;
-                if(NULL != (re = parse_rule_element(pstate))) {
-                    add_pointer_list(list, re);
-                    state = 21;
-                }
-                else
-                    state = 101;
-                break;
-
-
-            case 21:
-                TRACE;
-                if(NULL != (re = parse_rule_element(pstate)))
-                    add_pointer_list(list, re);
-                else
-                    state = 100;
-                break;
-
-
-            case 100:
-                // match made
-                TRACE;
-                retv = (ast_rule_element_list_t*)create_ast_node(AST_RULE_ELEMENT_LIST);
-                retv->rule_elems = list;
-                finished = true;
-                break;
-
-            case 101:
-                // no match
-                TRACE;
-                reset_token_queue(post);
-                destroy_pointer_list(list);
-                finished = true;
-                break;
-
-            case 102:
-                // error return
-                TRACE;
-                destroy_pointer_list(list);
-                finished = true;
-                break;
-
-            default:
-                fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
-        }
-    }
-
-    RETURN(retv);
-}
-
-/*
- * rule_function {
+ *     TERMINAL_NAME |
+ *     TERMINAL_OPER |
+ *     TERMINAL_SYMBOL |
  *     or_func |
  *     zero_or_more_func |
  *     zero_or_one_func |
- *     one_or_more_func
+ *     one_or_more_func |
+ *     group_func
  * }
+ *
  */
-static ast_rule_function_t* parse_rule_function(parser_state_t* pstate) {
+static ast_rule_element_t* parse_rule_element(parser_state_t* pstate) {
 
-    assert(pstate != NULL);
     ENTER;
 
-    ast_rule_function_t* retv = NULL;
-    int post = post_token_queue();
+    assert(pstate != NULL);
+    ast_rule_element_t* ptr = NULL;
+
     int state = 0;
     bool finished = false;
 
-    ast_node_t* func = NULL;
+    int post = post_token_queue();
+
+    token_t* term = NULL;
+    ast_node_t* nterm = NULL;
 
     while(!finished) {
         switch(state) {
-            case 00:
-                // first option initial state
-                TRACE;
-                if(NULL != (func = (ast_node_t*)parse_or_func(pstate)))
-                    state = 100;
-                else
-                    state = 10;
-                break;
-
-            case 10:
-                // initial state, option 2
-                TRACE;
-                if(NULL != (func = (ast_node_t*)parse_zero_or_more_func(pstate)))
-                    state = 100;
-                else
-                    state = 20;
-                break;
-
-            case 20:
-                // initial state, option 3
-                TRACE;
-                if(NULL != (func = (ast_node_t*)parse_zero_or_one_func(pstate)))
-                    state = 100;
-                else
-                    state = 30;
-                break;
-
-            case 30:
-                // initial state, option 4
-                TRACE;
-                if(NULL != (func = (ast_node_t*)parse_one_or_more_func(pstate)))
-                    state = 100;
-                else
-                    state = 101;
-                break;
-
             case 100:
-                // match made
                 TRACE;
-                retv = (ast_rule_function_t*)create_ast_node(AST_RULE_FUNCTION);
-                retv->func = func;
+                if(TTYPE == NON_TERMINAL) {
+                    term = get_token();
+                    state = 1000;
+                }
+                else
+                    state = 110;
+                break;
+
+            case 110:
+                TRACE;
+                if(TTYPE == TERMINAL_NAME) {
+                    term = get_token();
+                    state = 1000;
+                }
+                else
+                    state = 120;
+                break;
+
+            case 120:
+                TRACE;
+                if(TTYPE == TERMINAL_OPER) {
+                    term = get_token();
+                    state = 1000;
+                }
+                else
+                    state = 130;
+                break;
+
+            case 130:
+                TRACE;
+                if(TTYPE == TERMINAL_SYMBOL) {
+                    term = get_token();
+                    state = 1000;
+                }
+                else
+                    state = 140;
+                break;
+
+            case 140:
+                TRACE;
+                if(NULL != (nterm = parse_or_func(pstate)))
+                    state = 1000;
+                else
+                    state = 150;
+                break;
+
+            case 150:
+                TRACE;
+                if(NULL != (nterm = parse_zero_or_more_func(pstate)))
+                    state = 1000;
+                else
+                    state = 160;
+                break;
+
+            case 160:
+                TRACE;
+                if(NULL != (nterm = parse_zero_or_one_func(pstate)))
+                    state = 1000;
+                else
+                    state = 170;
+                break;
+
+            case 170:
+                TRACE;
+                if(NULL != (nterm = parse_one_or_more_func(pstate)))
+                    state = 1000;
+                else
+                    state = 180;
+                break;
+
+            case 180:
+                TRACE;
+                if(NULL != (nterm = parse_group_func(pstate)))
+                    state = 1000;
+                else {
+                    EXPECTED("a function or a terminal");
+                    state = 3000;
+                }
+                break;
+
+            case 1000:
+                TRACE;
+                ptr = create_ast_node(AST_);
+                ptr->term = term;
+                ptr->nterm = nterm;
                 finished = true;
                 break;
 
-            case 101:
-                // no match
+            case 2000:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 102:
-                // error return
+            case 3000:
                 TRACE;
                 finished = true;
                 break;
 
             default:
                 fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
         }
     }
 
-    RETURN(retv);
+    RETURN(ptr);
 }
 
 /*
  * one_or_more_func {
- *     ONE_OR_MORE rule_element_list
+ *     '+' rule_element
  * }
+ *
  */
 static ast_one_or_more_func_t* parse_one_or_more_func(parser_state_t* pstate) {
 
-    assert(pstate != NULL);
     ENTER;
 
-    ast_one_or_more_func_t* retv = NULL;
-    int post = post_token_queue();
+    assert(pstate != NULL);
+    ast_one_or_more_func_t* ptr = NULL;
+
     int state = 0;
     bool finished = false;
 
-    ast_rule_element_list_t* rel = NULL;
+    int post = post_token_queue();
 
     while(!finished) {
         switch(state) {
-            case 00:
-                // initial state
-                TRACE;
-                if(TTYPE == ONE_OR_MORE) {
-                    consume_token();
-                    state = 01;
-                }
-                else
-                    state = 101;
-                break;
-
-            case 01:
-                // initial state
-                TRACE;
-                if(NULL != (rel = parse_rule_element_list(pstate))) {
-                    state = 100;
-                }
-                else {
-                    EXPECTED("rule elements");
-                    state = 102;
-                }
-                break;
-
             case 100:
-                // match made
                 TRACE;
-                retv = (ast_one_or_more_func_t*)create_ast_node(AST_ONE_OR_MORE_FUNC);
-                retv->rel = rel;
+                break;
+
+            case 1000:
+                TRACE;
+                ptr = create_ast_node(AST_);
                 finished = true;
                 break;
 
-            case 101:
-                // no match
+            case 2000:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 102:
-                // error return
+            case 3000:
                 TRACE;
                 finished = true;
                 break;
 
             default:
                 fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
         }
     }
 
-    RETURN(retv);
+    RETURN(ptr);
 }
 
 /*
  * zero_or_one_func {
- *     ZERO_OR_ONE rule_element_list
+ *     '?' rule_element
  * }
+ *
  */
 static ast_zero_or_one_func_t* parse_zero_or_one_func(parser_state_t* pstate) {
 
-    assert(pstate != NULL);
     ENTER;
 
-    ast_zero_or_one_func_t* retv = NULL;
-    int post = post_token_queue();
+    assert(pstate != NULL);
+    ast_zero_or_one_func_t* ptr = NULL;
+
     int state = 0;
     bool finished = false;
 
-    ast_rule_element_list_t* rel = NULL;
+    int post = post_token_queue();
 
     while(!finished) {
         switch(state) {
-            case 00:
-                // initial state
-                TRACE;
-                if(TTYPE == ZERO_OR_ONE) {
-                    consume_token();
-                    state = 01;
-                }
-                else
-                    state = 101;
-                break;
-
-            case 01:
-                // initial state
-                TRACE;
-                if(NULL != (rel = parse_rule_element_list(pstate))) {
-                    state = 100;
-                }
-                else {
-                    EXPECTED("rule elements");
-                    state = 102;
-                }
-                break;
-
             case 100:
-                // match made
                 TRACE;
-                retv = (ast_zero_or_one_func_t*)create_ast_node(AST_ZERO_OR_ONE_FUNC);
-                retv->rel = rel;
+                break;
+
+            case 1000:
+                TRACE;
+                ptr = create_ast_node(AST_);
                 finished = true;
                 break;
 
-            case 101:
-                // no match
+            case 2000:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 102:
-                // error return
+            case 3000:
                 TRACE;
                 finished = true;
                 break;
 
             default:
                 fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
         }
     }
 
-    RETURN(retv);
+    RETURN(ptr);
 }
 
 /*
  * zero_or_more_func {
- *     ZERO_OR_MORE rule_element_list
+ *     '*' rule_element
  * }
+ *
  */
 static ast_zero_or_more_func_t* parse_zero_or_more_func(parser_state_t* pstate) {
 
-    assert(pstate != NULL);
     ENTER;
 
-    ast_zero_or_more_func_t* retv = NULL;
-    int post = post_token_queue();
+    assert(pstate != NULL);
+    ast_zero_or_more_func_t* ptr = NULL;
+
     int state = 0;
     bool finished = false;
 
-    ast_rule_element_list_t* rel = NULL;
+    int post = post_token_queue();
 
     while(!finished) {
         switch(state) {
-            case 00:
-                // initial state
-                TRACE;
-                if(TTYPE == ZERO_OR_MORE) {
-                    consume_token();
-                    state = 01;
-                }
-                else
-                    state = 101;
-                break;
-
-            case 01:
-                // initial state
-                TRACE;
-                if(NULL != (rel = parse_rule_element_list(pstate))) {
-                    state = 100;
-                }
-                else {
-                    EXPECTED("rule elements");
-                    state = 102;
-                }
-                break;
-
             case 100:
-                // match made
                 TRACE;
-                retv = (ast_zero_or_more_func_t*)create_ast_node(AST_ZERO_OR_MORE_FUNC);
-                retv->rel = rel;
+                break;
+
+            case 1000:
+                TRACE;
+                ptr = create_ast_node(AST_);
                 finished = true;
                 break;
 
-            case 101:
-                // no match
+            case 2000:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 102:
-                // error return
+            case 3000:
                 TRACE;
                 finished = true;
                 break;
 
             default:
                 fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
         }
     }
 
-    RETURN(retv);
+    RETURN(ptr);
 }
 
 /*
  * or_func {
- *     PIPE rule_element_list
+ *     '|' rule_element
  * }
+ *
  */
 static ast_or_func_t* parse_or_func(parser_state_t* pstate) {
 
-    assert(pstate != NULL);
     ENTER;
 
-    ast_or_func_t* retv = NULL;
-    int post = post_token_queue();
+    assert(pstate != NULL);
+    ast_or_func_t* ptr = NULL;
+
     int state = 0;
     bool finished = false;
 
-    ast_rule_element_list_t* rel = NULL;
+    int post = post_token_queue();
 
     while(!finished) {
         switch(state) {
-            case 00:
-                // initial state
-                TRACE;
-                if(TTYPE == PIPE) {
-                    consume_token();
-                    state = 01;
-                }
-                else
-                    state = 101;
-                break;
-
-            case 01:
-                // initial state
-                TRACE;
-                if(NULL != (rel = parse_rule_element_list(pstate))) {
-                    state = 100;
-                }
-                else {
-                    EXPECTED("rule elements");
-                    state = 102;
-                }
-                break;
-
             case 100:
-                // match made
                 TRACE;
-                retv = (ast_or_func_t*)create_ast_node(AST_OR_FUNC);
-                retv->rel = rel;
+                break;
+
+            case 1000:
+                TRACE;
+                ptr = create_ast_node(AST_);
                 finished = true;
                 break;
 
-            case 101:
-                // no match
+            case 2000:
                 TRACE;
                 reset_token_queue(post);
                 finished = true;
                 break;
 
-            case 102:
-                // error return
+            case 3000:
                 TRACE;
                 finished = true;
                 break;
 
             default:
                 fatal_error("FATAL: unknown state in %s: %d\n", __func__, state);
-                exit(1);
         }
     }
 
-    RETURN(retv);
+    RETURN(ptr);
 }
 
 /*
- * Main interface into the parser.
+ * group_func {
+ *     '(' +rule_element ')'
+ * }
+ *
  */
+static ast_group_func_t* parse_group_func(parser_state_t* pstate) {
 
-parser_state_t* init_parser(const char* file_name) {
+    ENTER;
 
-    assert(file_name != NULL);
+    assert(pstate != NULL);
+    ast_group_func_t* ptr = NULL;
+
+    RETURN(ptr);
+}
+
+/*
+ * Set up the parser to run.
+ */
+static parser_state_t* init_parser(const char* file_name) {
+
     ENTER;
 
     init_scanner(file_name);
-    parser_state_t* ptr = _ALLOC_DS(parser_state_t); // malloc(sizeof(parser_state_t));
+    parser_state_t* ptr = _ALLOC_DS(parser_state_t);
     ptr->state = 0;
 
     RETURN(ptr);
 }
 
-ast_grammar_t* parse(parser_state_t* ptr) {
+/*
+ * Public interface to the parser.
+ */
+void* parse(const char* file_name) {
 
     ENTER;
-    ast_grammar_t* retv = parse_grammar(ptr);
-    RETURN(retv);
+
+    assert(file_name != NULL);
+    void* ptr = parse_grammar(init_parser(file_name));
+
+    RETURN(ptr);
 }
+
