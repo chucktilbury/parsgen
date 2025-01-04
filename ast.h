@@ -19,6 +19,14 @@ typedef struct _ast_node_t_ {
     ast_type_t type;
 } ast_node_t;
 
+typedef int (*ast_callback_t)(void*, void*);
+
+typedef struct _ast_state_t_ {
+    ast_callback_t pre;
+    ast_callback_t post;
+    void* state;
+} ast_state_t;
+
 /*
  * grammar {
  *     +rule END_OF_INPUT
@@ -27,7 +35,7 @@ typedef struct _ast_node_t_ {
  */
 typedef struct _ast_grammar_t_ {
     ast_node_t node;
-    ponter_list_t* rules;
+    pointer_list_t* rules;
 } ast_grammar_t;
 
 /*

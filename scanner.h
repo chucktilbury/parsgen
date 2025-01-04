@@ -2,6 +2,7 @@
 #define _SCANNER_H_
 
 typedef enum {
+    // These tokens are part of the grammar.
     END_OF_INPUT,
     PIPE,
     ONE_OR_MORE,
@@ -16,6 +17,16 @@ typedef enum {
     TERMINAL_OPER,
     TERMINAL_NAME,
     TERMINAL,
+    // operators that are composed by the scanner and are
+    // part of the target grammar
+    OCBRACE_TOKEN,
+    CCBRACE_TOKEN,
+    OPAREN_TOKEN,
+    CPAREN_TOKEN,
+    PLUS_TOKEN,
+    STAR_TOKEN,
+    BAR_TOKEN,
+    QUESTION_TOKEN,
 } token_type_t;
 
 typedef struct {

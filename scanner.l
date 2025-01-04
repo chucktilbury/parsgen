@@ -24,17 +24,17 @@ static const char* fname;
 "{"     {add_token(OCURLY, yytext); return OCURLY;}
 "}"     {add_token(CCURLY, yytext); return CCURLY;}
 
-[A-Z_]+ {
+[A-Z_][A-Z_0-9]* {
         add_token(TERMINAL_SYMBOL, yytext);
         return TERMINAL_SYMBOL;
     }
 
-[a-zA-Z_]+  {
+[a-zA-Z_][a-zA-Z_0-9]*  {
         add_token(NON_TERMINAL, yytext);
         return NON_TERMINAL;
     }
 
-\'[a-zA-Z_]+\' {
+\'[a-zA-Z_][a-zA-Z_0-9]*\' {
         add_token(TERMINAL_NAME, yytext);
         return TERMINAL_NAME;
     }
@@ -44,7 +44,7 @@ static const char* fname;
         return TERMINAL_OPER;
     }
 
-\"[a-zA-Z_]+\" {
+\"[a-zA-Z_][a-zA-Z_0-9]*\" {
         add_token(TERMINAL_NAME, yytext);
         return TERMINAL_NAME;
     }

@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
 //     }
 //     return 0;
 
-    void* ast = parse(init_parser(argv[1]));
+    void* ast = parse(argv[1]);
 
     traverse_ast(ast, NULL);
 

@@ -262,7 +262,7 @@ for_clause {
     'for' ?('(' ?(expression 'as' IDENTIFIER) ')') loop_body
 }
 
-if_clause
+if_clause {
     'if' '(' expression ')' function_body *else_clause ?final_else_clause
 }
 
