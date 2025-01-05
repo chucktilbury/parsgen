@@ -15,17 +15,18 @@ typedef enum {
     AST_GROUP_FUNC,
 } ast_type_t;
 
+typedef void (*ast_callback_t)(void*);
+
 typedef struct _ast_node_t_ {
     ast_type_t type;
 } ast_node_t;
-
-typedef int (*ast_callback_t)(void*, void*);
 
 typedef struct _ast_state_t_ {
     ast_callback_t pre;
     ast_callback_t post;
     void* state;
 } ast_state_t;
+
 
 /*
  * grammar {
@@ -127,7 +128,7 @@ typedef struct _ast_group_func_t {
     pointer_list_t* list;
 } ast_group_func_t;
 
-void traverse_ast(void* ptr, void* state);
+void traverse_ast(void* node, void* state);
 ast_node_t* create_ast_node(ast_type_t type);
 ast_type_t get_ast_node_type(void* node);
 

@@ -10,23 +10,23 @@
 #include "pointer_list.h"
 #include "scanner.h"
 
-#define PRE_STATE                                                   \
-    do {                                                            \
-        if(state != NULL) {                                         \
-            if(((ast_state_t*)(state))->pre != NULL)                \
-                (*((ast_state_t*)(state))->pre)((void*)ptr, state); \
-        }                                                           \
+#define PRE_STATE                                                  \
+    do {                                                           \
+        if(state != NULL) {                                        \
+            if(((ast_state_t*)(state))->pre != NULL)               \
+                (*((ast_state_t*)(state))->pre)((ast_node_t*)ptr); \
+        }                                                          \
     } while(0)
 
 #define POST_STATE                                                  \
     do {                                                            \
         if(state != NULL) {                                         \
             if(((ast_state_t*)(state))->post != NULL)               \
-                (*((ast_state_t*)(state))->pre)((void*)ptr, state); \
+                (*((ast_state_t*)(state))->post)((ast_node_t*)ptr); \
         }                                                           \
     } while(0)
 
-#define TRACE_AST_STATE
+// #define TRACE_AST_STATE
 
 #ifdef TRACE_AST_STATE
 static int depth = 0;
@@ -72,7 +72,7 @@ static int num_states = 0;
         return;                                                             \
     } while(false)
 #else
-#define TRACE
+#define TRACE(...)
 #define ENTER      \
     do {           \
         PRE_STATE; \
@@ -175,17 +175,13 @@ static void traverse_rule_element(ast_rule_element_t* ptr, ast_state_t* state) {
 #ifdef TRACE_AST_STATE
     else if(ptr->term != NULL) {
         if(ptr->term->type == NON_TERMINAL)
-            TRACE("non-terminal: %s:%s:%s:%d", ptr->term->name, ptr->term->text,
-                  tok_type_to_str(ptr->term), ptr->term->line_no);
+            TRACE("non-terminal: %s:%s:%s:%d", ptr->term->name, ptr->term->text, tok_type_to_str(ptr->term), ptr->term->line_no);
         else if(ptr->term->type == TERMINAL_NAME)
-            TRACE("terminal name: %s:%s:%s:%d", ptr->term->name, ptr->term->text,
-                  tok_type_to_str(ptr->term), ptr->term->line_no);
+            TRACE("terminal name: %s:%s:%s:%d", ptr->term->name, ptr->term->text, tok_type_to_str(ptr->term), ptr->term->line_no);
         else if(ptr->term->type == TERMINAL_OPER)
-            TRACE("terminal oper: %s:%s:%s:%d", ptr->term->name, ptr->term->text,
-                  tok_type_to_str(ptr->term), ptr->term->line_no);
+            TRACE("terminal oper: %s:%s:%s:%d", ptr->term->name, ptr->term->text, tok_type_to_str(ptr->term), ptr->term->line_no);
         else if(ptr->term->type == TERMINAL_SYMBOL)
-            TRACE("terminal symbol: %s:%s:%s:%d", ptr->term->name, ptr->term->text,
-                  tok_type_to_str(ptr->term), ptr->term->line_no);
+            TRACE("terminal symbol: %s:%s:%s:%d", ptr->term->name, ptr->term->text, tok_type_to_str(ptr->term), ptr->term->line_no);
         else
             fatal_error("unknown terminal symbol in %s", __func__);
     }
@@ -291,7 +287,9 @@ static size_t get_ast_node_size(ast_type_t type) {
 void traverse_ast(void* ptr, void* state) {
 
     START;
+
     traverse_grammar((ast_grammar_t*)ptr, (ast_state_t*)state);
+
     FINISH;
 }
 

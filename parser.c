@@ -139,7 +139,7 @@ static ast_grammar_t* parse_grammar(parser_state_t* pstate) {
 
             case MATCH_STATE:
                 TRACE;
-                ptr = (ast_grammar_t*)create_ast_node(AST_RULE);
+                ptr = (ast_grammar_t*)create_ast_node(AST_GRAMMAR);
                 ptr->rules = list;
                 finished = true;
                 break;
