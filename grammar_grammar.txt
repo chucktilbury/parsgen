@@ -1,10 +1,20 @@
 # This is the grammar for the input of the parser template generator.
 
+NON_TERMINAL "[a-zA-Z_][a-zA-Z_0-9]*"
+TERMINAL_NAME "\'[a-zA-Z_][a-zA-Z_0-9]*\'"
+TERMINAL_OPER "\'[^a-zA-Z_\']+\'"
+TERMINAL_SYMBOL "[A-Z_][A-Z_0-9]*"
+TERMINAL_EXPR "\"[^\n]+\""
+
 grammar {
-    +rule END_OF_INPUT
+    +(non_terminal_rule | terminal_rule) END_OF_INPUT
 }
 
-rule {
+terminal_rule {
+    TERMINAL_SYMBOL TERMINAL_EXPR
+}
+
+non_terminal_rule {
     NON_TERMINAL '{' +rule_element '}'
 }
 

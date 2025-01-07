@@ -16,7 +16,7 @@ typedef enum {
     TERMINAL_SYMBOL,
     TERMINAL_OPER,
     TERMINAL_NAME,
-    TERMINAL,
+    TERMINAL_EXPR,
 } token_type_t;
 
 typedef struct {
@@ -30,6 +30,7 @@ typedef struct {
 void init_scanner(const char* file_name);
 void uninit_scanner(void);
 token_t* get_token(void);
+void add_token(token_type_t type, const char* str);
 token_t* consume_token(void);
 int post_token_queue(void);
 void reset_token_queue(int post);

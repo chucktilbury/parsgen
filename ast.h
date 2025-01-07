@@ -6,7 +6,8 @@
 
 typedef enum {
     AST_GRAMMAR,
-    AST_RULE,
+    AST_NON_TERMINAL_RULE,
+    AST_TERMINAL_RULE,
     AST_RULE_ELEMENT,
     AST_ONE_OR_MORE_FUNC,
     AST_ZERO_OR_ONE_FUNC,
@@ -40,16 +41,29 @@ typedef struct _ast_grammar_t_ {
 } ast_grammar_t;
 
 /*
- * rule {
+ * terminal_rule {
+ *     TERMINAL_SYMBOL TERMINAL_EXPR
+ * }
+ *
+ */
+typedef struct _ast_terminal_rule_t_ {
+    ast_node_t node;
+    token_t* term_sym;
+    token_t* term_expr;
+} ast_terminal_rule_t;
+
+
+/*
+ * non_terminal_rule {
  *     NON_TERMINAL '{' +rule_element '}'
  * }
  *
  */
-typedef struct _ast_rule_t_ {
+typedef struct _ast_non_terminal_rule_t_ {
     ast_node_t node;
     token_t* nterm;
     pointer_list_t* rule_elems;
-} ast_rule_t;
+} ast_non_terminal_rule_t;
 
 /*
  * rule_element {

@@ -3,7 +3,8 @@
 
 /*
     grammar
-    rule
+    terminal_rule
+    non_terminal_rule
     rule_element
     one_or_more_func
     zero_or_one_func

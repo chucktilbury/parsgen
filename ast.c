@@ -8,7 +8,7 @@
 #include "errors.h"
 #include "memory.h"
 #include "pointer_list.h"
-#include "scanner.h"
+// #include "scanner.h"
 
 #define PRE_STATE                                                  \
     do {                                                           \
@@ -91,7 +91,8 @@ static int num_states = 0;
 #endif
 
 static void traverse_grammar(ast_grammar_t* ptr, ast_state_t* state);
-static void traverse_rule(ast_rule_t* ptr, ast_state_t* state);
+static void traverse_non_terminal_rule(ast_non_terminal_rule_t* ptr, ast_state_t* state);
+static void traverse_terminal_rule(ast_terminal_rule_t* ptr, ast_state_t* state);
 static void traverse_rule_element(ast_rule_element_t* ptr, ast_state_t* state);
 static void traverse_one_or_more_func(ast_one_or_more_func_t* ptr, ast_state_t* state);
 static void traverse_zero_or_one_func(ast_zero_or_one_func_t* ptr, ast_state_t* state);
@@ -109,22 +110,45 @@ static void traverse_grammar(ast_grammar_t* ptr, ast_state_t* state) {
 
     ENTER;
 
-    ast_rule_t* rule;
+    ast_node_t* rule;
     int post = 0;
 
-    while(NULL != (rule = iterate_pointer_list(ptr->rules, &post)))
-        traverse_rule(rule, state);
+    while(NULL != (rule = iterate_pointer_list(ptr->rules, &post))) {
+        if(get_ast_node_type(rule) == AST_NON_TERMINAL_RULE)
+            traverse_non_terminal_rule((ast_non_terminal_rule_t*)rule, state);
+        else
+            traverse_terminal_rule((ast_terminal_rule_t*)rule, state);
+    }
 
     RETURN;
 }
 
 /*
- * rule {
+ * terminal_rule {
+ *     TERMINAL_SYMBOL TERMINAL_EXPR
+ * }
+ *
+ */
+static void traverse_terminal_rule(ast_terminal_rule_t* ptr, ast_state_t* state) {
+
+    ENTER;
+
+    TRACE("terminal_symbol: %s:%s:%s:%d", ptr->term_sym->name, ptr->term_sym->text,
+          tok_type_to_str(ptr->term_sym), ptr->term_sym->line_no);
+
+    TRACE("terminal_expr: %s:%s:%s:%d", ptr->term_expr->name, ptr->term_expr->text,
+          tok_type_to_str(ptr->term_expr), ptr->term_expr->line_no);
+
+    RETURN;
+}
+
+/*
+ * non_terminal_rule {
  *     NON_TERMINAL '{' +rule_element '}'
  * }
  *
  */
-static void traverse_rule(ast_rule_t* ptr, ast_state_t* state) {
+static void traverse_non_terminal_rule(ast_non_terminal_rule_t* ptr, ast_state_t* state) {
 
     ENTER;
 
@@ -274,7 +298,8 @@ static void traverse_group_func(ast_group_func_t* ptr, ast_state_t* state) {
 static size_t get_ast_node_size(ast_type_t type) {
 
     return (type == AST_GRAMMAR)            ? sizeof(ast_grammar_t) :
-            (type == AST_RULE)              ? sizeof(ast_rule_t) :
+            (type == AST_NON_TERMINAL_RULE) ? sizeof(ast_non_terminal_rule_t) :
+            (type == AST_TERMINAL_RULE)     ? sizeof(ast_terminal_rule_t) :
             (type == AST_RULE_ELEMENT)      ? sizeof(ast_rule_element_t) :
             (type == AST_ONE_OR_MORE_FUNC)  ? sizeof(ast_one_or_more_func_t) :
             (type == AST_ZERO_OR_ONE_FUNC)  ? sizeof(ast_zero_or_one_func_t) :

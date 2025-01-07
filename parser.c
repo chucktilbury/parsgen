@@ -72,7 +72,8 @@ static int num_states = 0;
     } while(false)
 
 static ast_grammar_t* parse_grammar(parser_state_t* pstate);
-static ast_rule_t* parse_rule(parser_state_t* pstate);
+static ast_non_terminal_rule_t* parse_non_terminal_rule(parser_state_t* pstate);
+static ast_terminal_rule_t* parse_terminal_rule(parser_state_t* pstate);
 static ast_rule_element_t* parse_rule_element(parser_state_t* pstate);
 static ast_one_or_more_func_t* parse_one_or_more_func(parser_state_t* pstate);
 static ast_zero_or_one_func_t* parse_zero_or_one_func(parser_state_t* pstate);
@@ -83,7 +84,7 @@ static ast_group_func_t* parse_group_func(parser_state_t* pstate);
 
 /*
  * grammar {
- *     +rule END_OF_INPUT
+ *    +(non_terminal_rule | terminal_rule) END_OF_INPUT
  * }
  *
  */
@@ -99,14 +100,19 @@ static ast_grammar_t* parse_grammar(parser_state_t* pstate) {
 
     int post = post_token_queue();
 
-    ast_rule_t* rule = NULL;
+    ast_node_t* rule = NULL;
     pointer_list_t* list = NULL;
 
     while(!finished) {
         switch(state) {
             case 100:
                 TRACE;
-                if(NULL != (rule = parse_rule(pstate))) {
+                if(NULL != (rule = (ast_node_t*)parse_non_terminal_rule(pstate))) {
+                    list = create_pointer_list();
+                    add_pointer_list(list, rule);
+                    state = 110;
+                }
+                else if(NULL != (rule = (ast_node_t*)parse_terminal_rule(pstate))) {
                     list = create_pointer_list();
                     add_pointer_list(list, rule);
                     state = 110;
@@ -119,7 +125,9 @@ static ast_grammar_t* parse_grammar(parser_state_t* pstate) {
 
             case 110:
                 TRACE;
-                if(NULL != (rule = parse_rule(pstate)))
+                if(NULL != (rule = (ast_node_t*)parse_non_terminal_rule(pstate)))
+                    add_pointer_list(list, rule);
+                else if(NULL != (rule = (ast_node_t*)parse_terminal_rule(pstate)))
                     add_pointer_list(list, rule);
                 else
                     state = 120;
@@ -164,17 +172,93 @@ static ast_grammar_t* parse_grammar(parser_state_t* pstate) {
 }
 
 /*
- * rule {
+ * terminal_rule {
+ *     TERMINAL_SYMBOL TERMINAL_EXPR
+ * }
+ *
+ */
+static ast_terminal_rule_t* parse_terminal_rule(parser_state_t* pstate) {
+    ENTER;
+
+    assert(pstate != NULL);
+    ast_terminal_rule_t* ptr = NULL;
+
+    int state = 100;
+    bool finished = false;
+
+    int post = post_token_queue();
+
+    token_t* term_sym = NULL;
+    token_t* term_expr = NULL;
+
+    while(!finished) {
+        switch(state) {
+            case 100:
+                TRACE;
+                if(TTYPE == TERMINAL_SYMBOL) {
+                    term_sym = get_token();
+                    consume_token();
+                    state = 110;
+                }
+                else {
+                    // EXPECTED("a non-terminal symbol");
+                    state = NO_MATCH_STATE;
+                }
+                break;
+
+            case 110:
+                TRACE;
+                if(TTYPE == TERMINAL_EXPR) {
+                    term_expr = get_token();
+                    consume_token();
+                    state = MATCH_STATE;
+                }
+                else {
+                    EXPECTED("a lexical expression");
+                    state = ERROR_STATE;
+                }
+                break;
+
+            case MATCH_STATE:
+                TRACE;
+                ptr = (ast_terminal_rule_t*)create_ast_node(AST_TERMINAL_RULE);
+                ptr->term_sym = term_sym;
+                ptr->term_expr = term_expr;
+                finished = true;
+                break;
+
+            case NO_MATCH_STATE:
+                TRACE;
+                reset_token_queue(post);
+                finished = true;
+                break;
+
+            case ERROR_STATE:
+                TRACE;
+                finished = true;
+                break;
+
+            default:
+                fatal_error("unknown state in %s: %d\n", __func__, state);
+        }
+    }
+
+    RETURN(ptr);
+}
+
+
+/*
+ * non_terminal_rule {
  *     NON_TERMINAL '{' +rule_element '}'
  * }
  *
  */
-static ast_rule_t* parse_rule(parser_state_t* pstate) {
+static ast_non_terminal_rule_t* parse_non_terminal_rule(parser_state_t* pstate) {
 
     ENTER;
 
     assert(pstate != NULL);
-    ast_rule_t* ptr = NULL;
+    ast_non_terminal_rule_t* ptr = NULL;
 
     int state = 100;
     bool finished = false;
@@ -248,7 +332,7 @@ static ast_rule_t* parse_rule(parser_state_t* pstate) {
 
             case MATCH_STATE:
                 TRACE;
-                ptr = (ast_rule_t*)create_ast_node(AST_RULE);
+                ptr = (ast_non_terminal_rule_t*)create_ast_node(AST_NON_TERMINAL_RULE);
                 ptr->nterm = nterm;
                 ptr->rule_elems = rule_elems;
                 finished = true;
