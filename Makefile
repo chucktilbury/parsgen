@@ -1,22 +1,22 @@
 
-
-CC = gcc
+TARGET	=	parsgen
+CC 	= 	gcc
 OBJS	=	scanner.o \
-			main.o \
-			parser.o \
-			ast.o \
-			errors.o \
-			memory.o \
-			regurge.o \
-			scanner_support.o \
-			pointer_list.o
+		main.o \
+		parser.o \
+		ast.o \
+		errors.o \
+		memory.o \
+		regurge.o \
+		scanner_support.o \
+		pointer_list.o
 
 OPT = -g -std=c11 -Wall -Wextra -Wpedantic -pedantic
 
 %.o: %.c
 	$(CC) -c $(OPT) $< -o $@
 
-simp: $(OBJS)
+$(TARGET): $(OBJS)
 	$(CC) $(OPT) -o $@ $^
 
 scan.gen.h scanner.c: scanner.l
@@ -35,4 +35,4 @@ scanner_support.o: scanner_support.c scanner.h
 main.o: main.c
 
 clean:
-	rm -f scanner.c scan.gen.h simp $(OBJS)
+	rm -f scanner.c scan.gen.h $(TARGET) $(OBJS)
