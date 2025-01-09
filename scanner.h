@@ -36,7 +36,7 @@ int post_token_queue(void);
 void reset_token_queue(int post);
 const char* tok_to_str(token_t*);
 const char* tok_type_to_str(token_t*);
-const char* get_file_name();
+const char* get_file_name(void);
 int get_line_no(void);
 
 #endif /* _SCANNER_H_ */

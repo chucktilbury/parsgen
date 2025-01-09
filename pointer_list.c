@@ -6,7 +6,7 @@
 #include "memory.h"
 #include "pointer_list.h"
 
-pointer_list_t* create_pointer_list() {
+pointer_list_t* create_pointer_list(void) {
 
     pointer_list_t* ptr = _ALLOC_DS(pointer_list_t);
     assert(ptr != NULL);
