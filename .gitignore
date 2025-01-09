@@ -1,10 +1,11 @@
 
 scanner.c
 scan.gen.h
-simp
+parsgen
 .vscode/
 *.i
 *.bin
+*.deps
 callgrind*
 
 # Prerequisites
